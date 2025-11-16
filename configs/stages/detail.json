@@ -1,0 +1,17 @@
+{
+  "stage": "detail",
+  "description": "Final detail enhancement pass",
+  "defaults": {
+    "prompt_suffix": "high detail, sharp focus, intricate details, fine texture, crisp",
+    "negative_prompt": "blurry, soft focus, pixelated, low resolution, artifacts",
+    "steps": 25,
+    "cfg_scale": 5.5,
+    "extra": {
+      "denoise": 0.25,
+      "scheduler": "dpm"
+    }
+  },
+  "recommended_models": ["flux_dev", "sdxl_base"],
+  "requires_input": true,
+  "notes": "Final pass for detail enhancement. Very low denoise to preserve everything from previous stages while adding fine details."
+}

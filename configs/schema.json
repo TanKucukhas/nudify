@@ -1,0 +1,123 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ExperimentConfiguration",
+  "description": "Schema for image generation experiment configuration",
+  "type": "object",
+  "required": ["experiment_id", "experiments"],
+  "properties": {
+    "experiment_id": {
+      "type": "string",
+      "description": "Unique identifier for the experiment batch",
+      "pattern": "^exp[0-9]{3,}$",
+      "examples": ["exp001", "exp002"]
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description of the experiment batch"
+    },
+    "experiments": {
+      "type": "array",
+      "description": "Array of individual generation requests",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/GenerationRequest"
+      }
+    }
+  },
+  "definitions": {
+    "GenerationRequest": {
+      "type": "object",
+      "required": ["stage", "prompt", "model"],
+      "properties": {
+        "stage": {
+          "type": "string",
+          "description": "Pipeline stage identifier",
+          "enum": ["pose", "anatomy", "lighting", "detail"],
+          "examples": ["pose", "anatomy"]
+        },
+        "prompt": {
+          "type": "string",
+          "description": "Positive prompt for image generation",
+          "minLength": 1
+        },
+        "negative_prompt": {
+          "type": "string",
+          "description": "Negative prompt to avoid unwanted features",
+          "default": ""
+        },
+        "seed": {
+          "type": "integer",
+          "description": "Random seed for reproducibility",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "width": {
+          "type": "integer",
+          "description": "Image width in pixels",
+          "minimum": 64,
+          "maximum": 2048,
+          "default": 768
+        },
+        "height": {
+          "type": "integer",
+          "description": "Image height in pixels",
+          "minimum": 64,
+          "maximum": 2048,
+          "default": 512
+        },
+        "steps": {
+          "type": "integer",
+          "description": "Number of sampling steps",
+          "minimum": 1,
+          "maximum": 150,
+          "default": 20
+        },
+        "cfg_scale": {
+          "type": "number",
+          "description": "Classifier-free guidance scale",
+          "minimum": 1.0,
+          "maximum": 30.0,
+          "default": 7.0
+        },
+        "model": {
+          "type": "string",
+          "description": "Model identifier to use for generation",
+          "enum": ["sd15", "sdxl_base", "sdxl_lightning", "flux_schnell", "flux_dev"],
+          "examples": ["sdxl_lightning", "flux_schnell"]
+        },
+        "input_image": {
+          "type": "string",
+          "description": "Path to input image for img2img (optional)"
+        },
+        "extra": {
+          "type": "object",
+          "description": "Additional model-specific parameters",
+          "properties": {
+            "denoise": {
+              "type": "number",
+              "description": "Denoise strength for img2img (0.0-1.0)",
+              "minimum": 0.0,
+              "maximum": 1.0,
+              "default": 0.75
+            },
+            "scheduler": {
+              "type": "string",
+              "description": "Sampling scheduler/sampler to use",
+              "enum": ["euler", "euler_a", "dpm", "ddim", "plms", "lms"],
+              "default": "euler_a"
+            },
+            "clip_skip": {
+              "type": "integer",
+              "description": "Number of CLIP layers to skip",
+              "minimum": 0,
+              "maximum": 12,
+              "default": 0
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

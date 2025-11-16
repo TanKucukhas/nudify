@@ -1,0 +1,14 @@
+{
+  "positive_base": "high quality, detailed, photorealistic, professional lighting, 8k uhd",
+  "negative_base": "blurry, distorted, low quality, artifacts, watermark, text, signature, bad anatomy, extra limbs, deformed, ugly, poorly drawn",
+  "quality_modifiers": {
+    "high": "masterpiece, best quality, ultra detailed, sharp focus",
+    "medium": "good quality, detailed",
+    "low": "simple, basic"
+  },
+  "style_presets": {
+    "realistic": "photorealistic, photo, natural lighting, realistic skin texture",
+    "artistic": "digital art, illustration, painterly, stylized",
+    "studio": "studio photography, professional lighting, clean background"
+  }
+}

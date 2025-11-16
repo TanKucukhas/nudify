@@ -1,0 +1,17 @@
+{
+  "stage": "anatomy",
+  "description": "Refinement pass focusing on anatomical accuracy",
+  "defaults": {
+    "prompt_suffix": "correct anatomy, proportional, natural body structure, realistic hands and feet",
+    "negative_prompt": "distorted anatomy, extra fingers, missing fingers, deformed hands, bad proportions, extra limbs",
+    "steps": 20,
+    "cfg_scale": 6.5,
+    "extra": {
+      "denoise": 0.35,
+      "scheduler": "euler"
+    }
+  },
+  "recommended_models": ["sdxl_base", "flux_dev"],
+  "requires_input": true,
+  "notes": "Uses img2img with low denoise to fix anatomical issues while preserving composition. Input should be from pose stage."
+}

@@ -1,0 +1,17 @@
+{
+  "stage": "lighting",
+  "description": "Lighting and atmosphere adjustment",
+  "defaults": {
+    "prompt_suffix": "professional lighting, natural shadows, realistic illumination, depth",
+    "negative_prompt": "flat lighting, overexposed, underexposed, harsh shadows, unnatural lighting",
+    "steps": 20,
+    "cfg_scale": 6.0,
+    "extra": {
+      "denoise": 0.3,
+      "scheduler": "euler"
+    }
+  },
+  "recommended_models": ["sdxl_base", "flux_dev"],
+  "requires_input": true,
+  "notes": "Adjusts lighting and atmosphere. Low denoise to maintain structure from previous stages."
+}

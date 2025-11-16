@@ -1,0 +1,22 @@
+# FastAPI backend
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.6.0
+
+# HTTP client for ComfyUI API
+requests>=2.31.0
+httpx>=0.25.0
+
+# Image processing
+Pillow>=10.0.0
+
+# Data validation and manipulation
+jsonschema>=4.20.0
+
+# CLI and utilities
+click>=8.1.0
+python-dotenv>=1.0.0
+
+# Development
+pytest>=7.4.0
+black>=23.11.0

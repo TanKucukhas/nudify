@@ -1,0 +1,17 @@
+{
+  "stage": "pose",
+  "description": "Initial generation focusing on composition and pose",
+  "defaults": {
+    "prompt_suffix": "neutral pose, full body, gray background, professional composition",
+    "negative_prompt": "blurry, distorted, extra limbs, bad anatomy, cropped, cut off",
+    "width": 768,
+    "height": 512,
+    "steps": 25,
+    "cfg_scale": 7.0,
+    "extra": {
+      "scheduler": "euler"
+    }
+  },
+  "recommended_models": ["sdxl_lightning", "flux_schnell"],
+  "notes": "Focus on getting the overall composition and pose correct. Use lower denoise for faster iteration."
+}

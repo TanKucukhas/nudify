@@ -1,0 +1,48 @@
+{
+  "experiment_id": "exp001",
+  "description": "Initial test of multi-stage pipeline with SDXL Lightning",
+  "experiments": [
+    {
+      "stage": "pose",
+      "prompt": "full-body portrait, neutral standing pose, gray background, realistic lighting, professional photography",
+      "negative_prompt": "blurry, distorted, extra limbs, bad anatomy, cropped, cut off, deformed",
+      "seed": 123456,
+      "width": 768,
+      "height": 1024,
+      "steps": 20,
+      "cfg_scale": 7.0,
+      "model": "flux_schnell",
+      "extra": {
+        "scheduler": "euler"
+      }
+    },
+    {
+      "stage": "pose",
+      "prompt": "full-body portrait, neutral standing pose, gray background, realistic lighting, professional photography",
+      "negative_prompt": "blurry, distorted, extra limbs, bad anatomy, cropped, cut off, deformed",
+      "seed": 789012,
+      "width": 768,
+      "height": 1024,
+      "steps": 20,
+      "cfg_scale": 7.0,
+      "model": "flux_schnell",
+      "extra": {
+        "scheduler": "euler"
+      }
+    },
+    {
+      "stage": "pose",
+      "prompt": "full-body portrait, neutral standing pose, gray background, realistic lighting, professional photography",
+      "negative_prompt": "blurry, distorted, extra limbs, bad anatomy, cropped, cut off, deformed",
+      "seed": 345678,
+      "width": 768,
+      "height": 1024,
+      "steps": 20,
+      "cfg_scale": 7.5,
+      "model": "flux_schnell",
+      "extra": {
+        "scheduler": "euler"
+      }
+    }
+  ]
+}
