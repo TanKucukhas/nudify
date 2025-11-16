@@ -8,8 +8,8 @@
     "experiment_id": {
       "type": "string",
       "description": "Unique identifier for the experiment batch",
-      "pattern": "^exp[0-9]{3,}$",
-      "examples": ["exp001", "exp002"]
+      "pattern": "^exp[0-9a-z_-]+$",
+      "examples": ["exp001", "exp002", "exp_test_batch_001", "exp-production-2024"]
     },
     "description": {
       "type": "string",
@@ -31,9 +31,10 @@
       "properties": {
         "stage": {
           "type": "string",
-          "description": "Pipeline stage identifier",
-          "enum": ["pose", "anatomy", "lighting", "detail"],
-          "examples": ["pose", "anatomy"]
+          "description": "Pipeline stage identifier (custom stages allowed)",
+          "pattern": "^[a-z_]+$",
+          "minLength": 1,
+          "examples": ["pose", "anatomy", "lighting", "detail", "custom_stage"]
         },
         "prompt": {
           "type": "string",
