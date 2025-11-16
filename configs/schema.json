@@ -82,9 +82,10 @@
         },
         "model": {
           "type": "string",
-          "description": "Model identifier to use for generation",
-          "enum": ["sd15", "sdxl_base", "sdxl_lightning", "flux_schnell", "flux_dev"],
-          "examples": ["sdxl_lightning", "flux_schnell"]
+          "description": "Model identifier to use for generation (must match filename or model_map key)",
+          "pattern": "^[a-z0-9_]+$",
+          "minLength": 1,
+          "examples": ["sdxl_base", "sdxl_lightning", "flux_schnell", "custom_model"]
         },
         "input_image": {
           "type": "string",

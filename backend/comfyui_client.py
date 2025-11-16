@@ -78,6 +78,16 @@ class ComfyUIClient:
             "flux_dev": "flux1-dev.safetensors",
         }
 
+        # Get checkpoint filename
+        # If model is in map, use mapped name
+        # Otherwise, assume model name is the filename (add .safetensors if not present)
+        if request.model in model_map:
+            ckpt_name = model_map[request.model]
+        elif request.model.endswith('.safetensors'):
+            ckpt_name = request.model
+        else:
+            ckpt_name = f"{request.model}.safetensors"
+
         # Basic workflow structure
         # This should be customized based on your actual ComfyUI setup
         workflow = {
@@ -85,7 +95,7 @@ class ComfyUIClient:
                 # Load Checkpoint
                 "1": {
                     "inputs": {
-                        "ckpt_name": model_map.get(request.model, "sdxl_lightning.safetensors")
+                        "ckpt_name": ckpt_name
                     },
                     "class_type": "CheckpointLoaderSimple"
                 },
