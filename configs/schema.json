@@ -104,9 +104,10 @@
             },
             "scheduler": {
               "type": "string",
-              "description": "Sampling scheduler/sampler to use",
-              "enum": ["euler", "euler_a", "dpm", "ddim", "plms", "lms"],
-              "default": "euler_a"
+              "description": "Sampling scheduler/sampler to use (any ComfyUI-compatible scheduler)",
+              "pattern": "^[a-zA-Z0-9_+ ]+$",
+              "default": "euler",
+              "examples": ["euler", "euler_ancestral", "DPM++ 2M Karras", "UniPC"]
             },
             "clip_skip": {
               "type": "integer",
