@@ -5,8 +5,8 @@ echo "================================"
 echo ""
 
 # ComfyUI kontrolü
-echo "1️⃣  ComfyUI (port 8188)"
-if curl -s http://localhost:8188/system_stats > /dev/null 2>&1; then
+echo "1️⃣  ComfyUI (port 8000)"
+if curl -s http://localhost:8000/system_stats > /dev/null 2>&1; then
     echo "   ✅ Çalışıyor"
 else
     echo "   ❌ Çalışmıyor!"
@@ -16,9 +16,9 @@ fi
 echo ""
 
 # Backend kontrolü
-echo "2️⃣  Backend (port 8000)"
-if curl -s http://localhost:8000/health > /dev/null 2>&1; then
-    STATUS=$(curl -s http://localhost:8000/health | grep -o '"comfyui":"[^"]*' | cut -d'"' -f4)
+echo "2️⃣  Backend (port 8001)"
+if curl -s http://localhost:8001/health > /dev/null 2>&1; then
+    STATUS=$(curl -s http://localhost:8001/health | grep -o '"comfyui":"[^"]*' | cut -d'"' -f4)
     if [ "$STATUS" = "connected" ]; then
         echo "   ✅ Çalışıyor (ComfyUI'ye bağlı)"
     else
@@ -53,8 +53,8 @@ echo ""
 echo "================================"
 
 # Özet
-COMFY_OK=$(curl -s http://localhost:8188/system_stats > /dev/null 2>&1 && echo "yes" || echo "no")
-BACKEND_OK=$(curl -s http://localhost:8000/health > /dev/null 2>&1 && echo "yes" || echo "no")
+COMFY_OK=$(curl -s http://localhost:8000/system_stats > /dev/null 2>&1 && echo "yes" || echo "no")
+BACKEND_OK=$(curl -s http://localhost:8001/health > /dev/null 2>&1 && echo "yes" || echo "no")
 
 if [ "$COMFY_OK" = "yes" ] && [ "$BACKEND_OK" = "yes" ]; then
     echo "✅ Sistem hazır! Deneme çalıştırabilirsin."

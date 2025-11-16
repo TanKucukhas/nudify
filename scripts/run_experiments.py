@@ -105,8 +105,8 @@ def save_results(results: List[Dict[str, Any]], output_path: Path) -> None:
 )
 @click.option(
     "--api-url",
-    default="http://localhost:8000",
-    help="Backend API URL (default: http://localhost:8000)"
+    default="http://localhost:8001",
+    help="Backend API URL (default: http://localhost:8001)"
 )
 @click.option(
     "--schema",
