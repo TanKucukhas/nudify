@@ -61,24 +61,31 @@
    - Sorun: Flux Schnell erişim kısıtlamalı
    - Çözüm: Token oluşturuldu, erişim izni alındı
 
+6. **Flux Workflow Uyumsuzluğu** ⚠️
+   - Sorun: Flux modelleri CLIPTextEncode workflow'u ile çalışmıyor
+   - Detay: Flux farklı text encoder mimarisi kullanıyor
+   - Çözüm: SDXL Base kullanılıyor, Flux için ayrı workflow gerekli
+   - Durum: exp001 config SDXL Base'e çevrildi
+
 ### 📍 Mevcut Durum
 
 #### ✅ Çalışıyor
 - ComfyUI (port 8000)
 - Backend server (port 8001)
-- Flux Schnell model hazır
+- SDXL Base model hazır (6.5 GB) ✅
+- Flux Schnell model hazır (22 GB) - workflow desteği yok ⚠️
+- SDXL Lightning mevcut (4.8 GB) - Base ile kullanılabilir
 - Tüm scriptler çalışır durumda
-- Git repository hazır
+- **Git repository pushed** → github.com/TanKucukhas/nudify ✅
 
 #### ⏳ Devam Ediyor
-- SDXL Base indiriliyor (~30% - 1.9/6.6 GB)
+- Flux için özel workflow oluşturulması gerekiyor
 
 #### 🎯 Bir Sonraki Adımlar
-1. İlk deneyi çalıştır (Flux Schnell ile)
-2. SDXL Base indirme tamamlandığında SDXL test et
-3. Claude evaluation test et (API key ile)
-4. İlk commit yap
-5. Multi-stage pipeline test et
+1. İlk deneyi çalıştır (SDXL Base ile) ← ŞİMDİ HAZIR!
+2. Claude evaluation test et (API key ile)
+3. Multi-stage pipeline test et
+4. Flux workflow oluştur (opsiyonel - gelecekte)
 
 ### 🗂️ Dosya Konumları
 
@@ -122,10 +129,11 @@ cd ~/workspace/nudify && git status
 
 ### 🐛 Bilinen Sınırlamalar
 
-1. **SDXL Lightning** tek başına çalışmıyor - SDXL Base gerekli
-2. **ComfyUI** default port 8000 kullanıyor (8188 yerine)
-3. **Claude eval** şu anda mock mode (ANTHROPIC_API_KEY gerekli)
-4. **Multi-stage pipeline** henüz test edilmedi
+1. **Flux modelleri** şu anki workflow ile çalışmıyor - farklı text encoder yapısı gerekiyor ⚠️
+2. **SDXL Lightning** tek başına çalışmıyor - SDXL Base gerekli
+3. **ComfyUI** default port 8000 kullanıyor (8188 yerine)
+4. **Claude eval** şu anda mock mode (ANTHROPIC_API_KEY gerekli)
+5. **Multi-stage pipeline** henüz test edilmedi
 
 ### 📚 Önemli Dosyalar
 

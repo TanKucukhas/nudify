@@ -120,7 +120,7 @@ nudify/
 ```json
 {
   "experiment_id": "exp002",
-  "description": "Flux Schnell landscape test",
+  "description": "SDXL Base landscape test",
   "experiments": [
     {
       "stage": "pose",
@@ -131,7 +131,7 @@ nudify/
       "height": 1024,
       "steps": 25,
       "cfg_scale": 7.0,
-      "model": "flux_schnell",
+      "model": "sdxl_base",
       "extra": {
         "scheduler": "euler"
       }
@@ -156,9 +156,11 @@ curl -X POST http://localhost:8001/generate \
 
 | Model | Boyut | Hız | Kalite | Kullanım |
 |-------|-------|-----|--------|----------|
-| **Flux Schnell** | 22 GB | ⚡⚡ | ⭐⭐⭐⭐ | Önerilen - tam model |
-| **SDXL Base** | 6.5 GB | ⚡ | ⭐⭐⭐⭐ | Kaliteli çıktı |
+| **SDXL Base** | 6.5 GB | ⚡ | ⭐⭐⭐⭐ | ✅ Önerilen - kaliteli çıktı |
 | **SDXL Lightning** | 4.8 GB | ⚡⚡⚡ | ⭐⭐⭐ | Hızlı iterasyon (Base gerekli) |
+| **Flux Schnell** | 22 GB | ⚡⚡ | ⭐⭐⭐⭐ | ⚠️ Özel workflow gerekli (şu an desteklenmiyor) |
+
+> **Not:** Flux modelleri farklı text encoder mimarisi kullandığı için mevcut workflow ile uyumlu değildir. Şu an için SDXL Base kullanmanız önerilir.
 
 ## 🔧 Konfigürasyon
 
@@ -333,7 +335,7 @@ Düzelt: `euler_a` → `euler_ancestral` veya `euler`
     {
       "stage": "pose",
       "prompt": "portrait...",
-      "model": "flux_schnell"
+      "model": "sdxl_base"
     },
     {
       "stage": "anatomy",

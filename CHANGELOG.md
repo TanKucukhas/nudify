@@ -2,6 +2,26 @@
 
 Tüm önemli değişiklikler bu dosyada belgelenmiştir.
 
+## [1.0.1] - 2024-11-16
+
+### 🔧 Düzeltmeler
+
+#### Flux Workflow Uyumsuzluğu
+- **Sorun tespit edildi:** Flux modelleri mevcut CLIPTextEncode workflow'u ile çalışmıyor
+- **Teknik detay:** Flux modelleri farklı text encoder mimarisi kullanıyor
+- **Geçici çözüm:** exp001 config SDXL Base kullanacak şekilde güncellendi
+- **Uzun vadeli çözüm:** Flux için ayrı workflow geliştirilmesi gerekiyor
+
+#### Git Repository
+- GitHub'a ilk push yapıldı: `github.com/TanKucukhas/nudify`
+- Tüm büyük dosyalar (modeller, results) başarıyla ignore edildi
+- 41 dosya, ~5000 satır kod commit edildi
+
+### 📝 Dokümantasyon
+- SESSION_NOTES.md güncellendi - Flux workflow sorunu eklendi
+- Bilinen sınırlamalar listesi güncellendi
+- Model önerileri revize edildi: SDXL Base şu an için tercih edilen model
+
 ## [1.0.0] - 2024-11-16
 
 ### 🎉 İlk Sürüm
@@ -137,6 +157,7 @@ Tam işlevsel AI görsel üretim lab'ı oluşturuldu.
 
 ### 🐛 Bilinen Sorunlar
 
+- **Flux modelleri** mevcut workflow ile desteklenmiyor (farklı text encoder yapısı gerekiyor)
 - SDXL Lightning tek başına çalışmıyor (SDXL Base gerekli)
 - ComfyUI varsayılan port 8000 kullanıyor (8188 yerine)
 - İlk başlatma yavaş olabiliyor (model tarama)
