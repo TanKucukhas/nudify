@@ -1,0 +1,46 @@
+[
+  {
+    "prompt": "A beautiful sunset over mountains, photorealistic, 8k, detailed",
+    "negative_prompt": "blurry, low quality, distorted, bad anatomy",
+    "model": "juggernaut_xl",
+    "steps": 25,
+    "cfg_scale": 7.0,
+    "width": 1024,
+    "height": 1024,
+    "seed": -1
+  },
+  {
+    "prompt": "Portrait of a woman with long hair, professional photography, studio lighting",
+    "negative_prompt": "blurry, distorted, bad anatomy, extra limbs",
+    "model": "juggernaut_xl",
+    "steps": 30,
+    "cfg_scale": 7.5,
+    "width": 768,
+    "height": 1024,
+    "seed": 12345
+  },
+  {
+    "prompt": "Cyberpunk city at night, neon lights, rain, futuristic architecture",
+    "negative_prompt": "blurry, low quality, amateur",
+    "model": "juggernaut_xl",
+    "steps": 35,
+    "cfg_scale": 8.0,
+    "width": 1280,
+    "height": 768
+  },
+  {
+    "prompt": "Fantasy dragon flying over castle, epic scene, dramatic lighting",
+    "model": "flux_fast",
+    "steps": 4,
+    "cfg_scale": 1.0,
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "prompt": "Realistic portrait, natural lighting, shallow depth of field",
+    "steps": 25,
+    "cfg_scale": 7.0,
+    "width": 1024,
+    "height": 1024
+  }
+]
