@@ -151,6 +151,16 @@ export default function BatchPage() {
             throw new Error(`Request at index ${index} is missing 'prompt' field`);
           }
 
+          // Build extra params - only include defined values
+          const extra: any = {};
+          if (req.extra?.denoise !== undefined) {
+            extra.denoise = req.extra.denoise;
+          }
+          const schedulerValue = req.extra?.scheduler || (req as any).scheduler || defaults.scheduler;
+          if (schedulerValue) {
+            extra.scheduler = schedulerValue;
+          }
+
           return {
             experiment_id: expId,
             stage: req.stage || 'batch',
@@ -162,10 +172,7 @@ export default function BatchPage() {
             width: req.width !== undefined ? req.width : defaults.width,
             height: req.height !== undefined ? req.height : defaults.height,
             seed: req.seed !== undefined ? req.seed : -1,
-            extra: {
-              denoise: req.extra?.denoise,
-              scheduler: req.extra?.scheduler || req.scheduler || defaults.scheduler,
-            },
+            ...(Object.keys(extra).length > 0 ? { extra } : {}),
           };
         });
 
