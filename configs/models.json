@@ -44,6 +44,20 @@
       "notes": "This model may require special workflow - CLIP model might be missing"
     },
 
+    "juggernaut_xl": {
+      "checkpoint_file": "juggernautXL_ragnarokBy.safetensors",
+      "type": "sdxl",
+      "description": "JuggernautXL Ragnarok - Photorealistic SDXL fine-tune",
+      "enabled": true,
+      "recommended_settings": {
+        "width": 1024,
+        "height": 1024,
+        "steps": 25,
+        "cfg_scale": 7.0,
+        "scheduler": "DPM++ 2M Karras"
+      }
+    },
+
     "sdxl_nsfw": {
       "checkpoint_file": "sdxl_nsfw_finetune.safetensors",
       "type": "sdxl",
