@@ -9,6 +9,14 @@ env/
 ENV/
 .venv
 
+# Next.js (Admin Panel)
+admin/node_modules/
+admin/.next/
+admin/.turbo/
+admin/out/
+admin/build/
+admin/.vercel/
+
 # Environment variables
 .env
 .env.local
@@ -124,8 +132,9 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+# Python lib dirs (not admin/lib)
+/lib/
+/lib64/
 parts/
 sdist/
 var/
@@ -133,3 +142,4 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+admin/catalyst-temp/

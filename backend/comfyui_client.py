@@ -8,6 +8,7 @@ import requests
 from pathlib import Path
 from typing import Dict, Any, Optional
 from .models import GenerateRequest
+from .model_manager import ModelManager
 
 
 class ComfyUIClient:
@@ -16,6 +17,7 @@ class ComfyUIClient:
     def __init__(self, base_url: str = "http://localhost:8188"):
         self.base_url = base_url
         self.client_id = str(uuid.uuid4())
+        self.model_manager = ModelManager(comfyui_url=base_url)
 
     def generate_image(
         self,
@@ -58,6 +60,47 @@ class ComfyUIClient:
 
         return str(image_path), metadata
 
+    def _parse_scheduler(self, scheduler_str: str) -> tuple[str, str]:
+        """
+        Parse scheduler string into (sampler_name, scheduler).
+
+        Examples:
+            "DPM++ 2M Karras" -> ("dpmpp_2m", "karras")
+            "euler" -> ("euler", "normal")
+            "dpmpp_2m" -> ("dpmpp_2m", "normal")
+        """
+        # Mapping of common scheduler strings to (sampler, scheduler)
+        scheduler_map = {
+            "dpm++ 2m karras": ("dpmpp_2m", "karras"),
+            "dpm++ 2m": ("dpmpp_2m", "normal"),
+            "dpm++ sde karras": ("dpmpp_sde", "karras"),
+            "dpm++ sde": ("dpmpp_sde", "normal"),
+            "euler a": ("euler_ancestral", "normal"),
+            "euler_a": ("euler_ancestral", "normal"),
+        }
+
+        # Normalize input
+        normalized = scheduler_str.lower().strip()
+
+        # Check if it's a known combined scheduler
+        if normalized in scheduler_map:
+            return scheduler_map[normalized]
+
+        # Valid schedulers
+        valid_schedulers = ["simple", "normal", "karras", "exponential", "sgm_uniform",
+                          "ddim_uniform", "beta", "linear_quadratic", "kl_optimal"]
+
+        # If it ends with a known scheduler name, split it
+        for sched in valid_schedulers:
+            if normalized.endswith(sched):
+                # Extract sampler part
+                sampler = normalized.replace(sched, "").strip()
+                if sampler:
+                    return (sampler, sched)
+
+        # Default: assume it's just a sampler name
+        return (scheduler_str, "normal")
+
     def _create_workflow(self, request: GenerateRequest) -> Dict[str, Any]:
         """
         Create a ComfyUI workflow from request parameters.
@@ -68,25 +111,15 @@ class ComfyUIClient:
         # Generate random seed if not provided
         seed = request.seed if request.seed is not None else int(time.time())
 
-        # Map model names to checkpoint files
-        # Update these to match your actual model filenames in ComfyUI
-        model_map = {
-            "sd15": "sd_v1-5.safetensors",
-            "sdxl_base": "sd_xl_base_1.0.safetensors",
-            "sdxl_lightning": "sdxl_lightning_4step.safetensors",
-            "flux_schnell": "flux1-schnell.safetensors",
-            "flux_dev": "flux1-dev.safetensors",
-        }
+        # Resolve model name using ModelManager
+        try:
+            ckpt_name = self.model_manager.resolve_model(request.model)
+        except ValueError as e:
+            raise ValueError(f"Model resolution failed: {e}")
 
-        # Get checkpoint filename
-        # If model is in map, use mapped name
-        # Otherwise, assume model name is the filename (add .safetensors if not present)
-        if request.model in model_map:
-            ckpt_name = model_map[request.model]
-        elif request.model.endswith('.safetensors'):
-            ckpt_name = request.model
-        else:
-            ckpt_name = f"{request.model}.safetensors"
+        # Resolve scheduler alias if provided
+        scheduler_str = request.extra.scheduler if request.extra and request.extra.scheduler else "euler"
+        scheduler_str = self.model_manager.resolve_scheduler(scheduler_str)
 
         # Basic workflow structure
         # This should be customized based on your actual ComfyUI setup
@@ -130,8 +163,8 @@ class ComfyUIClient:
                         "seed": seed,
                         "steps": request.steps,
                         "cfg": request.cfg_scale,
-                        "sampler_name": request.extra.scheduler if request.extra else "euler",
-                        "scheduler": "normal",
+                        "sampler_name": self._parse_scheduler(scheduler_str)[0],
+                        "scheduler": self._parse_scheduler(scheduler_str)[1],
                         "denoise": request.extra.denoise if (request.extra and request.input_image) else 1.0,
                         "model": ["1", 0],
                         "positive": ["2", 0],

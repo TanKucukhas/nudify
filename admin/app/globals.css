@@ -1,0 +1,8 @@
+@import 'tailwindcss';
+
+@variant dark (.dark &);
+
+@theme {
+  --font-sans: Inter, sans-serif;
+  --font-sans--font-feature-settings: 'cv11';
+}

@@ -1,0 +1,78 @@
+{
+  "$schema": "model-config-schema",
+  "description": "Central model configuration for all experiments. Define model aliases and default settings here.",
+
+  "models": {
+    "sdxl_base": {
+      "checkpoint_file": "sd_xl_base_1.0.safetensors",
+      "type": "sdxl",
+      "description": "SDXL Base 1.0 - High quality 1024x1024 generation",
+      "recommended_settings": {
+        "width": 1024,
+        "height": 1024,
+        "steps": 30,
+        "cfg_scale": 7.0,
+        "scheduler": "euler"
+      }
+    },
+
+    "flux_fast": {
+      "checkpoint_file": "flux1-schnell.safetensors",
+      "type": "flux",
+      "description": "FLUX.1 Schnell - Fast, modern diffusion model",
+      "recommended_settings": {
+        "width": 1024,
+        "height": 1024,
+        "steps": 4,
+        "cfg_scale": 1.0,
+        "scheduler": "euler"
+      }
+    },
+
+    "sdxl_lightning": {
+      "checkpoint_file": "sdxl_lightning_4step.safetensors",
+      "type": "sdxl_lightning",
+      "description": "SDXL Lightning - Fast 4-step generation (Note: May not have CLIP)",
+      "enabled": false,
+      "recommended_settings": {
+        "width": 1024,
+        "height": 1024,
+        "steps": 4,
+        "cfg_scale": 2.0,
+        "scheduler": "euler"
+      },
+      "notes": "This model may require special workflow - CLIP model might be missing"
+    },
+
+    "sdxl_nsfw": {
+      "checkpoint_file": "sdxl_nsfw_finetune.safetensors",
+      "type": "sdxl",
+      "description": "SDXL NSFW Fine-tuned model (user-provided)",
+      "enabled": false,
+      "recommended_settings": {
+        "width": 768,
+        "height": 1024,
+        "steps": 40,
+        "cfg_scale": 7.5,
+        "scheduler": "DPM++ 2M Karras"
+      },
+      "notes": "You need to download and install this model manually to ComfyUI models directory"
+    }
+  },
+
+  "defaults": {
+    "model": "sdxl_base",
+    "fallback_model": "sdxl_base",
+    "width": 768,
+    "height": 1024,
+    "steps": 30,
+    "cfg_scale": 7.0,
+    "scheduler": "euler"
+  },
+
+  "scheduler_aliases": {
+    "dpm_karras": "DPM++ 2M Karras",
+    "dpm_sde": "DPM++ SDE Karras",
+    "euler_a": "euler_ancestral"
+  }
+}
