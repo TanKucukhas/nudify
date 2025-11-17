@@ -32,6 +32,14 @@ export default function GeneratePage() {
 
   const [generatedImage, setGeneratedImage] = useState<GenerateResponse | null>(null);
 
+  // Progress tracking state
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [progressStatus, setProgressStatus] = useState('');
+  const [progressMessage, setProgressMessage] = useState('');
+  const [progressPercent, setProgressPercent] = useState(0);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [totalSteps, setTotalSteps] = useState(0);
+
   const { data: modelsData, isLoading: modelsLoading } = useQuery({
     queryKey: ['models'],
     queryFn: () => apiClient.listModels(),
@@ -66,15 +74,7 @@ export default function GeneratePage() {
     }
   };
 
-  const generateMutation = useMutation({
-    mutationFn: (request: GenerateRequest) => apiClient.generate(request),
-    onSuccess: (response) => {
-      setGeneratedImage(response);
-      setExperimentId(`test_${Date.now()}`);
-    },
-  });
-
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!prompt.trim()) {
       alert('Please enter a prompt');
       return;
@@ -84,6 +84,15 @@ export default function GeneratePage() {
       alert('Please select a model');
       return;
     }
+
+    // Reset progress state
+    setIsGenerating(true);
+    setProgressStatus('starting');
+    setProgressMessage('Starting generation...');
+    setProgressPercent(0);
+    setCurrentStep(0);
+    setTotalSteps(0);
+    setGeneratedImage(null);
 
     const request: GenerateRequest = {
       experiment_id: experimentId,
@@ -102,7 +111,98 @@ export default function GeneratePage() {
       },
     };
 
-    generateMutation.mutate(request);
+    try {
+      // Connect to SSE stream
+      const response = await fetch('http://localhost:8001/api/generate/stream', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(request),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (!reader) {
+        throw new Error('No response body');
+      }
+
+      // Read SSE stream
+      while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) {
+          break;
+        }
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = JSON.parse(line.slice(6));
+
+            // Update progress state
+            setProgressStatus(data.status || '');
+            setProgressMessage(data.message || '');
+            setProgressPercent(Math.round((data.progress || 0) * 100));
+
+            if (data.step !== undefined) {
+              setCurrentStep(data.step);
+            }
+            if (data.total_steps !== undefined) {
+              setTotalSteps(data.total_steps);
+            }
+
+            // Check for completion
+            if (data.status === 'success' && data.image_path) {
+              // Build GenerateResponse object
+              const imageResponse: GenerateResponse = {
+                ok: true,
+                experiment_id: request.experiment_id,
+                stage: request.stage,
+                image_path: data.image_path,
+                metadata: {
+                  seed: data.metadata.seed,
+                  model: data.metadata.model,
+                  steps: data.metadata.steps,
+                  cfg_scale: data.metadata.cfg_scale,
+                  width: data.metadata.width,
+                  height: data.metadata.height,
+                  denoise: data.metadata.denoise,
+                  scheduler: data.metadata.scheduler,
+                },
+              };
+
+              setGeneratedImage(imageResponse);
+              setExperimentId(`test_${Date.now()}`);
+            }
+
+            // Check for error
+            if (data.error) {
+              alert(`Error: ${data.message}`);
+              setIsGenerating(false);
+              break;
+            }
+
+            // Check for done
+            if (data.done) {
+              setIsGenerating(false);
+              break;
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Generation error:', error);
+      alert(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setIsGenerating(false);
+    }
   };
 
   const enabledModels = modelsData?.models.filter(m => m.enabled) || [];
@@ -121,8 +221,10 @@ export default function GeneratePage() {
 
           <div className="space-y-6">
             <Field>
-              <Label>Prompt *</Label>
+              <Label htmlFor="prompt">Prompt *</Label>
               <Textarea
+                id="prompt"
+                name="prompt"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 rows={4}
@@ -131,8 +233,10 @@ export default function GeneratePage() {
             </Field>
 
             <Field>
-              <Label>Negative Prompt</Label>
+              <Label htmlFor="negativePrompt">Negative Prompt</Label>
               <Textarea
+                id="negativePrompt"
+                name="negativePrompt"
                 value={negativePrompt}
                 onChange={(e) => setNegativePrompt(e.target.value)}
                 rows={2}
@@ -141,8 +245,10 @@ export default function GeneratePage() {
             </Field>
 
             <Field>
-              <Label>Model *</Label>
+              <Label htmlFor="model">Model *</Label>
               <Select
+                id="model"
+                name="model"
                 value={selectedModel}
                 onChange={(e) => handleModelChange(e.target.value)}
                 disabled={modelsLoading}
@@ -169,8 +275,10 @@ export default function GeneratePage() {
 
             <div className="grid grid-cols-2 gap-4">
               <Field>
-                <Label>Experiment ID</Label>
+                <Label htmlFor="experimentId">Experiment ID</Label>
                 <Input
+                  id="experimentId"
+                  name="experimentId"
                   type="text"
                   value={experimentId}
                   onChange={(e) => setExperimentId(e.target.value)}
@@ -178,8 +286,10 @@ export default function GeneratePage() {
               </Field>
 
               <Field>
-                <Label>Stage</Label>
+                <Label htmlFor="stage">Stage</Label>
                 <Input
+                  id="stage"
+                  name="stage"
                   type="text"
                   value={stage}
                   onChange={(e) => setStage(e.target.value)}
@@ -189,16 +299,20 @@ export default function GeneratePage() {
 
             <div className="grid grid-cols-2 gap-4">
               <Field>
-                <Label>Steps: {steps}</Label>
+                <Label htmlFor="steps">Steps: {steps}</Label>
                 <input
+                  id="steps-range"
                   type="range"
                   value={steps}
                   onChange={(e) => setSteps(parseInt(e.target.value))}
                   min={1}
                   max={150}
                   className="w-full"
+                  aria-label="Steps slider"
                 />
                 <Input
+                  id="steps"
+                  name="steps"
                   type="number"
                   value={steps}
                   onChange={(e) => setSteps(parseInt(e.target.value))}
@@ -209,8 +323,9 @@ export default function GeneratePage() {
               </Field>
 
               <Field>
-                <Label>CFG Scale: {cfgScale}</Label>
+                <Label htmlFor="cfgScale">CFG Scale: {cfgScale}</Label>
                 <input
+                  id="cfgScale-range"
                   type="range"
                   value={cfgScale}
                   onChange={(e) => setCfgScale(parseFloat(e.target.value))}
@@ -218,8 +333,11 @@ export default function GeneratePage() {
                   max={20}
                   step={0.5}
                   className="w-full"
+                  aria-label="CFG Scale slider"
                 />
                 <Input
+                  id="cfgScale"
+                  name="cfgScale"
                   type="number"
                   value={cfgScale}
                   onChange={(e) => setCfgScale(parseFloat(e.target.value))}
@@ -233,8 +351,10 @@ export default function GeneratePage() {
 
             <div className="grid grid-cols-2 gap-4">
               <Field>
-                <Label>Width</Label>
+                <Label htmlFor="width">Width</Label>
                 <Select
+                  id="width"
+                  name="width"
                   value={width}
                   onChange={(e) => setWidth(parseInt(e.target.value))}
                 >
@@ -247,8 +367,10 @@ export default function GeneratePage() {
               </Field>
 
               <Field>
-                <Label>Height</Label>
+                <Label htmlFor="height">Height</Label>
                 <Select
+                  id="height"
+                  name="height"
                   value={height}
                   onChange={(e) => setHeight(parseInt(e.target.value))}
                 >
@@ -262,9 +384,11 @@ export default function GeneratePage() {
             </div>
 
             <Field>
-              <Label>Seed (-1 for random)</Label>
+              <Label htmlFor="seed">Seed (-1 for random)</Label>
               <div className="flex gap-2">
                 <Input
+                  id="seed"
+                  name="seed"
                   type="number"
                   value={seed}
                   onChange={(e) => setSeed(parseInt(e.target.value))}
@@ -285,8 +409,10 @@ export default function GeneratePage() {
               </summary>
               <div className="mt-4 space-y-4">
                 <Field>
-                  <Label>Denoise: {denoise}</Label>
+                  <Label htmlFor="denoise">Denoise: {denoise}</Label>
                   <input
+                    id="denoise"
+                    name="denoise"
                     type="range"
                     value={denoise}
                     onChange={(e) => setDenoise(parseFloat(e.target.value))}
@@ -294,6 +420,7 @@ export default function GeneratePage() {
                     max={1}
                     step={0.05}
                     className="w-full"
+                    aria-label="Denoise strength"
                   />
                   <Text className="mt-1">
                     1.0 = full generation, lower values for img2img refinement
@@ -301,8 +428,10 @@ export default function GeneratePage() {
                 </Field>
 
                 <Field>
-                  <Label>Scheduler (optional)</Label>
+                  <Label htmlFor="scheduler">Scheduler (optional)</Label>
                   <Input
+                    id="scheduler"
+                    name="scheduler"
                     type="text"
                     value={scheduler}
                     onChange={(e) => setScheduler(e.target.value)}
@@ -315,16 +444,11 @@ export default function GeneratePage() {
             <div className="pt-4">
               <Button
                 onClick={handleGenerate}
-                disabled={generateMutation.isPending || !prompt.trim() || !selectedModel}
+                disabled={isGenerating || !prompt.trim() || !selectedModel}
                 className="w-full"
               >
-                {generateMutation.isPending ? 'Generating...' : 'Generate Image'}
+                {isGenerating ? 'Generating...' : 'Generate Image'}
               </Button>
-              {generateMutation.error && (
-                <Text className="mt-2 text-red-600 dark:text-red-400">
-                  Error: {generateMutation.error instanceof Error ? generateMutation.error.message : 'Unknown error'}
-                </Text>
-              )}
             </div>
           </div>
         </div>
@@ -334,11 +458,48 @@ export default function GeneratePage() {
           <Heading level={2}>Preview</Heading>
           <Divider className="my-4" soft />
 
-          {generateMutation.isPending ? (
-            <div className="flex flex-col items-center justify-center py-32">
-              <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-zinc-950 dark:border-white"></div>
-              <Text className="mt-4">Generating image...</Text>
-              <Text className="mt-2">This may take a few seconds</Text>
+          {isGenerating ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              {/* Progress Bar */}
+              <div className="w-full max-w-md">
+                <div className="mb-4 flex items-center justify-between">
+                  <Text className="font-medium">{progressMessage}</Text>
+                  <Text className="font-medium">{progressPercent}%</Text>
+                </div>
+
+                <div className="relative h-3 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
+                  <div
+                    className="absolute left-0 top-0 h-full bg-gradient-to-r from-purple-500 to-blue-500 transition-all duration-300 ease-out"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+
+                {/* Step Counter */}
+                {totalSteps > 0 && (
+                  <div className="mt-4 text-center">
+                    <Text className="text-lg font-semibold">
+                      Step {currentStep} / {totalSteps}
+                    </Text>
+                  </div>
+                )}
+
+                {/* Status Badge */}
+                <div className="mt-6 flex justify-center">
+                  <Badge color={
+                    progressStatus === 'generating' ? 'blue' :
+                    progressStatus === 'starting' ? 'purple' :
+                    progressStatus === 'saving' ? 'green' :
+                    'zinc'
+                  }>
+                    {progressStatus.toUpperCase()}
+                  </Badge>
+                </div>
+
+                {/* Spinner */}
+                <div className="mt-8 flex justify-center">
+                  <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-zinc-950 dark:border-white"></div>
+                </div>
+              </div>
             </div>
           ) : generatedImage ? (
             <div className="space-y-4">

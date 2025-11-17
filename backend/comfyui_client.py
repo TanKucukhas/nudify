@@ -5,8 +5,10 @@ import json
 import uuid
 import time
 import requests
+import websocket
+import threading
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Callable
 from .models import GenerateRequest
 from .model_manager import ModelManager
 
@@ -16,13 +18,19 @@ class ComfyUIClient:
 
     def __init__(self, base_url: str = "http://localhost:8188"):
         self.base_url = base_url
+        self.ws_url = base_url.replace("http://", "ws://").replace("https://", "wss://")
         self.client_id = str(uuid.uuid4())
         self.model_manager = ModelManager(comfyui_url=base_url)
+        self.ws = None
+        self.ws_thread = None
+        self.progress_data = {}
+        self.prompt_outputs = {}
 
     def generate_image(
         self,
         request: GenerateRequest,
-        output_dir: Path
+        output_dir: Path,
+        progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None
     ) -> tuple[str, Dict[str, Any]]:
         """
         Generate an image using ComfyUI.
@@ -30,21 +38,47 @@ class ComfyUIClient:
         Args:
             request: Generation request parameters
             output_dir: Directory to save output images
+            progress_callback: Optional callback for progress updates
 
         Returns:
             Tuple of (image_path, metadata)
         """
+        # Connect to WebSocket for progress updates
+        if progress_callback:
+            self._connect_websocket(progress_callback)
+
         # Create workflow from request parameters
         workflow = self._create_workflow(request)
 
         # Submit workflow to ComfyUI
         prompt_id = self._queue_prompt(workflow)
 
+        # Notify progress: prompt queued
+        if progress_callback:
+            progress_callback({
+                "status": "queued",
+                "message": "Workflow queued in ComfyUI",
+                "progress": 0.0
+            })
+
         # Wait for completion and get results
-        output_images = self._wait_for_completion(prompt_id)
+        output_images = self._wait_for_completion(prompt_id, progress_callback)
+
+        # Disconnect WebSocket
+        if self.ws:
+            self._disconnect_websocket()
 
         # Save image to output directory
         image_path = self._save_image(output_images[0], output_dir, request)
+
+        # Notify progress: complete
+        if progress_callback:
+            progress_callback({
+                "status": "complete",
+                "message": "Image saved successfully",
+                "progress": 1.0,
+                "image_path": str(image_path)
+            })
 
         # Build metadata
         metadata = {
@@ -203,17 +237,25 @@ class ComfyUIClient:
         result = response.json()
         return result["prompt_id"]
 
-    def _wait_for_completion(self, prompt_id: str, timeout: int = 300) -> list:
+    def _wait_for_completion(
+        self,
+        prompt_id: str,
+        progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
+        timeout: int = 300
+    ) -> list:
         """
         Wait for a prompt to complete and return the output images.
 
-        This is a simplified implementation. A production version would use
-        WebSocket connections for real-time updates.
+        Uses WebSocket events if available, falls back to polling.
         """
         start_time = time.time()
 
         while time.time() - start_time < timeout:
-            # Check history for completed prompt
+            # Check if we received output via WebSocket
+            if prompt_id in self.prompt_outputs:
+                return self.prompt_outputs[prompt_id]
+
+            # Fallback: Check history for completed prompt
             url = f"{self.base_url}/history/{prompt_id}"
             response = requests.get(url)
 
@@ -223,6 +265,12 @@ class ComfyUIClient:
                     outputs = history[prompt_id].get("outputs", {})
                     for node_id, node_output in outputs.items():
                         if "images" in node_output:
+                            if progress_callback:
+                                progress_callback({
+                                    "status": "saving",
+                                    "message": "Downloading generated image",
+                                    "progress": 0.95
+                                })
                             return node_output["images"]
 
             time.sleep(1)
@@ -263,6 +311,108 @@ class ComfyUIClient:
         output_path.write_bytes(response.content)
 
         return output_path
+
+    def _connect_websocket(self, progress_callback: Callable[[Dict[str, Any]], None]) -> None:
+        """Connect to ComfyUI WebSocket for real-time updates."""
+        try:
+            ws_url = f"{self.ws_url}/ws?clientId={self.client_id}"
+
+            def on_message(ws, message):
+                try:
+                    data = json.loads(message)
+                    msg_type = data.get("type")
+
+                    if msg_type == "execution_start":
+                        progress_callback({
+                            "status": "starting",
+                            "message": "Starting execution",
+                            "progress": 0.05
+                        })
+
+                    elif msg_type == "executing":
+                        node_id = data.get("data", {}).get("node")
+                        if node_id:
+                            progress_callback({
+                                "status": "executing",
+                                "message": f"Executing node {node_id}",
+                                "progress": 0.1
+                            })
+
+                    elif msg_type == "progress":
+                        # Progress event: {type: "progress", data: {value: 5, max: 20}}
+                        progress_data = data.get("data", {})
+                        value = progress_data.get("value", 0)
+                        max_val = progress_data.get("max", 1)
+
+                        if max_val > 0:
+                            # Map to 10% - 90% range (0-10% is queue/start, 90-100% is saving)
+                            progress_pct = 0.1 + (value / max_val) * 0.8
+
+                            progress_callback({
+                                "status": "generating",
+                                "message": f"Generating step {value}/{max_val}",
+                                "progress": progress_pct,
+                                "step": value,
+                                "total_steps": max_val
+                            })
+
+                    elif msg_type == "executed":
+                        # Execution complete, check for output
+                        prompt_id = data.get("data", {}).get("prompt_id")
+                        output = data.get("data", {}).get("output", {})
+
+                        if prompt_id and output:
+                            for node_id, node_output in output.items():
+                                if "images" in node_output:
+                                    self.prompt_outputs[prompt_id] = node_output["images"]
+
+                        progress_callback({
+                            "status": "executed",
+                            "message": "Execution complete",
+                            "progress": 0.9
+                        })
+
+                except Exception as e:
+                    print(f"Error processing WebSocket message: {e}")
+
+            def on_error(ws, error):
+                print(f"WebSocket error: {error}")
+
+            def on_close(ws, close_status_code, close_msg):
+                pass
+
+            def on_open(ws):
+                progress_callback({
+                    "status": "connected",
+                    "message": "Connected to ComfyUI",
+                    "progress": 0.0
+                })
+
+            self.ws = websocket.WebSocketApp(
+                ws_url,
+                on_message=on_message,
+                on_error=on_error,
+                on_close=on_close,
+                on_open=on_open
+            )
+
+            # Run WebSocket in a separate thread
+            self.ws_thread = threading.Thread(target=self.ws.run_forever, daemon=True)
+            self.ws_thread.start()
+
+            # Give it a moment to connect
+            time.sleep(0.5)
+
+        except Exception as e:
+            print(f"Failed to connect WebSocket: {e}")
+
+    def _disconnect_websocket(self) -> None:
+        """Disconnect from ComfyUI WebSocket."""
+        if self.ws:
+            self.ws.close()
+            self.ws = None
+        if self.ws_thread:
+            self.ws_thread = None
 
     def health_check(self) -> bool:
         """Check if ComfyUI is accessible."""

@@ -7,10 +7,11 @@ import asyncio
 from pathlib import Path
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException, BackgroundTasks
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+import queue
 
 from .models import GenerateRequest, GenerateResponse, ImageMetadata, BatchRequest
 from .comfyui_client import ComfyUIClient
@@ -117,6 +118,104 @@ async def generate(request: GenerateRequest):
             status_code=500,
             detail=f"Error generating image: {str(e)}"
         )
+
+
+@app.post("/api/generate/stream")
+async def generate_stream(request: GenerateRequest):
+    """
+    Generate an image using ComfyUI with Server-Sent Events (SSE) for real-time progress.
+
+    This endpoint streams progress updates during generation and returns the final result.
+    """
+    async def event_generator():
+        progress_queue = queue.Queue()
+
+        def progress_callback(data: dict):
+            """Callback to capture progress updates from ComfyUI client."""
+            progress_queue.put(data)
+
+        def generate_in_thread():
+            """Run the actual generation in a separate thread."""
+            try:
+                # Check ComfyUI availability
+                if not comfyui.health_check():
+                    progress_queue.put({
+                        "status": "error",
+                        "message": f"ComfyUI is not available at {COMFYUI_URL}",
+                        "error": True
+                    })
+                    return
+
+                # Create output directory for this experiment
+                output_dir = RESULTS_DIR / request.experiment_id
+                output_dir.mkdir(parents=True, exist_ok=True)
+
+                # Generate the image with progress callback
+                image_path, metadata = comfyui.generate_image(
+                    request,
+                    output_dir,
+                    progress_callback=progress_callback
+                )
+
+                # Send final success message
+                progress_queue.put({
+                    "status": "success",
+                    "message": "Generation complete",
+                    "progress": 1.0,
+                    "image_path": image_path,
+                    "metadata": metadata,
+                    "done": True
+                })
+
+            except TimeoutError as e:
+                progress_queue.put({
+                    "status": "error",
+                    "message": f"Image generation timed out: {str(e)}",
+                    "error": True,
+                    "done": True
+                })
+            except Exception as e:
+                progress_queue.put({
+                    "status": "error",
+                    "message": f"Error generating image: {str(e)}",
+                    "error": True,
+                    "done": True
+                })
+
+        # Start generation in background thread
+        import threading
+        gen_thread = threading.Thread(target=generate_in_thread, daemon=True)
+        gen_thread.start()
+
+        # Stream progress updates
+        while True:
+            try:
+                # Wait for progress update (with timeout to allow checking if done)
+                try:
+                    progress_data = progress_queue.get(timeout=0.5)
+                except queue.Empty:
+                    continue
+
+                # Send SSE event
+                yield f"data: {json.dumps(progress_data)}\n\n"
+
+                # Check if generation is complete
+                if progress_data.get("done") or progress_data.get("error"):
+                    break
+
+            except Exception as e:
+                yield f"data: {json.dumps({'status': 'error', 'message': str(e), 'error': True, 'done': True})}\n\n"
+                break
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
 
 
 # ============================================================================

@@ -75,13 +75,13 @@
   },
 
   "defaults": {
-    "model": "sdxl_base",
-    "fallback_model": "sdxl_base",
-    "width": 768,
+    "model": "juggernaut_xl",
+    "fallback_model": "juggernaut_xl",
+    "width": 1024,
     "height": 1024,
-    "steps": 30,
+    "steps": 25,
     "cfg_scale": 7.0,
-    "scheduler": "euler"
+    "scheduler": "DPM++ 2M Karras"
   },
 
   "scheduler_aliases": {
