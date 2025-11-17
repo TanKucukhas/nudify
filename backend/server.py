@@ -404,12 +404,21 @@ async def process_batch_job(batch_id: str):
             # Mark item as started
             job_manager.mark_item_started(batch_id, idx)
 
+            # Create progress callback to update item progress
+            def progress_callback(data: dict):
+                progress = data.get("progress", 0)
+                job_manager.update_item_progress(batch_id, idx, progress)
+
             # Create output directory
             output_dir = RESULTS_DIR / job.experiment_id
             output_dir.mkdir(parents=True, exist_ok=True)
 
-            # Generate image
-            image_path, metadata = comfyui.generate_image(item.request, output_dir)
+            # Generate image with progress callback
+            image_path, metadata = comfyui.generate_image(
+                item.request,
+                output_dir,
+                progress_callback=progress_callback
+            )
 
             # Mark as completed
             result = {

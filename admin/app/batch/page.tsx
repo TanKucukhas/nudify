@@ -122,10 +122,10 @@ export default function BatchPage() {
 
         if (Array.isArray(parsed)) {
           requests = parsed;
-          expId = experimentId;
+          expId = `batch_${Date.now()}`;
         } else if (parsed.experiments && Array.isArray(parsed.experiments)) {
           requests = parsed.experiments;
-          expId = parsed.experiment_id || experimentId;
+          expId = parsed.experiment_id || `batch_${Date.now()}`;
         } else {
           throw new Error('JSON must be an array of requests or a BatchRequest object');
         }
@@ -134,10 +134,46 @@ export default function BatchPage() {
           throw new Error('No requests in JSON');
         }
 
+        // Get defaults from modelsData
+        const defaults = modelsData?.defaults || {
+          model: 'juggernaut_xl',
+          steps: 25,
+          cfg_scale: 7.0,
+          width: 1024,
+          height: 1024,
+          scheduler: 'DPM++ 2M Karras'
+        };
+
+        // Apply defaults to each request
+        const normalizedRequests: GenerateRequest[] = requests.map((req, index) => {
+          // Ensure prompt exists
+          if (!req.prompt) {
+            throw new Error(`Request at index ${index} is missing 'prompt' field`);
+          }
+
+          return {
+            experiment_id: expId,
+            stage: req.stage || 'batch',
+            prompt: req.prompt,
+            negative_prompt: req.negative_prompt || 'blurry, low quality, distorted, bad anatomy',
+            model: req.model || defaults.model,
+            steps: req.steps !== undefined ? req.steps : defaults.steps,
+            cfg_scale: req.cfg_scale !== undefined ? req.cfg_scale : defaults.cfg_scale,
+            width: req.width !== undefined ? req.width : defaults.width,
+            height: req.height !== undefined ? req.height : defaults.height,
+            seed: req.seed !== undefined ? req.seed : -1,
+            extra: {
+              denoise: req.extra?.denoise,
+              scheduler: req.extra?.scheduler || req.scheduler || defaults.scheduler,
+            },
+          };
+        });
+
         setJsonError('');
+        setActiveBatchId(null); // Reset previous batch
         createBatch.mutate({
           experiment_id: expId,
-          experiments: requests,
+          experiments: normalizedRequests,
         });
       } catch (error) {
         setJsonError(error instanceof Error ? error.message : 'Invalid JSON');
@@ -333,15 +369,21 @@ export default function BatchPage() {
                       setJsonError('');
                     }}
                     rows={20}
-                    placeholder={`[\n  {\n    "experiment_id": "test_001",\n    "stage": "pose",\n    "prompt": "portrait of a woman",\n    "model": "sdxl_base",\n    "steps": 20,\n    "cfg_scale": 7\n  }\n]`}
+                    placeholder={`[\n  {\n    "prompt": "A beautiful sunset over mountains"\n  },\n  {\n    "prompt": "Portrait of a woman, professional photography",\n    "steps": 30,\n    "cfg_scale": 7.5\n  },\n  {\n    "prompt": "Cyberpunk city at night",\n    "model": "flux_fast",\n    "steps": 4\n  }\n]\n\nNote: Only 'prompt' is required!\nDefaults: juggernaut_xl, 25 steps, 1024x1024`}
                     className="font-mono text-sm"
                   />
                   {jsonError && (
                     <Text className="mt-2 text-red-600 dark:text-red-400">{jsonError}</Text>
                   )}
-                  <Text className="mt-2">
-                    Paste an array of GenerateRequest objects or a full BatchRequest
-                  </Text>
+                  <div className="mt-3 space-y-2">
+                    <Text className="font-medium">Format:</Text>
+                    <ul className="text-sm space-y-1 list-disc list-inside text-zinc-600 dark:text-zinc-400">
+                      <li>Only <code className="px-1 py-0.5 bg-zinc-100 dark:bg-zinc-800 rounded">prompt</code> field is required</li>
+                      <li>experiment_id is auto-generated (batch_[timestamp])</li>
+                      <li>Default model: <strong>juggernaut_xl</strong></li>
+                      <li>See configs/example_batch_config.json for more examples</li>
+                    </ul>
+                  </div>
                 </Field>
               </>
             )}
@@ -458,6 +500,23 @@ export default function BatchPage() {
                               {item.status}
                             </Badge>
                           </div>
+
+                          {/* Progress bar for processing items */}
+                          {item.status === 'processing' && item.progress !== undefined && item.progress > 0 && (
+                            <div className="mt-2">
+                              <div className="flex justify-between text-xs text-zinc-600 dark:text-zinc-400 mb-1">
+                                <Text>Generating...</Text>
+                                <Text>{Math.round(item.progress * 100)}%</Text>
+                              </div>
+                              <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
+                                <div
+                                  className="bg-blue-600 dark:bg-blue-500 h-1.5 rounded-full transition-all duration-300"
+                                  style={{ width: `${item.progress * 100}%` }}
+                                />
+                              </div>
+                            </div>
+                          )}
+
                           {item.error && (
                             <Text className="text-xs text-red-600 dark:text-red-400 mt-1">{item.error}</Text>
                           )}
